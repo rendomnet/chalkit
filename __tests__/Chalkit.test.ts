@@ -206,4 +206,20 @@ describe("Chalkit", () => {
     chalkit.itemDelete("users", "user1");
     expect(store.users).toEqual({});
   });
+
+  test("should support method chaining", () => {
+    chalkit
+      .set("user", { name: "John" })
+      .merge("user", { age: 30 })
+      .set("settings", { theme: "dark" })
+      .arrayAppend("todos", ["Task 1", "Task 2"])
+      .itemSet("users", "user1", { name: "Alice" });
+
+    expect(store).toEqual({
+      user: { name: "John", age: 30 },
+      settings: { theme: "dark" },
+      todos: ["Task 1", "Task 2"],
+      users: { user1: { name: "Alice" } },
+    });
+  });
 });

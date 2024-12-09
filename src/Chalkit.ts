@@ -29,41 +29,46 @@ export class Chalkit {
     return { target, finalKey };
   }
 
-  set(path: string, value: any): void {
+  set(path: string, value: any): this {
     const { target, finalKey } = this.getTarget(path);
     target[finalKey] = this.smartCloneDeep(value);
+    return this;
   }
 
-  remove(path: string): void {
+  remove(path: string): this {
     const { target, finalKey } = this.getTarget(path);
     delete target[finalKey];
+    return this;
   }
 
-  merge(path: string, value: Record<string, any>): void {
+  merge(path: string, value: Record<string, any>): this {
     const { target, finalKey } = this.getTarget(path);
     this.ensurePlainObject(target, finalKey);
     target[finalKey] = {
       ...target[finalKey],
       ...this.smartCloneDeep(value),
     };
+    return this;
   }
 
-  mergeDeep(path: string, value: Record<string, any>): void {
+  mergeDeep(path: string, value: Record<string, any>): this {
     const { target, finalKey } = this.getTarget(path);
     this.ensurePlainObject(target, finalKey);
     const existingData = target[finalKey];
     target[finalKey] = merge({}, existingData, this.smartCloneDeep(value));
+    return this;
   }
 
   // Object item operations
-  itemSet(path: string, id: string, data: any): void {
+  itemSet(path: string, id: string, data: any): this {
     const { target, finalKey } = this.getTarget(path);
     this.ensurePlainObject(target, finalKey);
     this.ensurePlainObject(target[finalKey], id);
     target[finalKey][id] = this.smartCloneDeep(data);
+    return this;
   }
 
-  itemMerge(path: string, id: string, data: Record<string, any>): void {
+  itemMerge(path: string, id: string, data: Record<string, any>): this {
     const { target, finalKey } = this.getTarget(path);
     this.ensurePlainObject(target, finalKey);
     this.ensurePlainObject(target[finalKey], id);
@@ -71,51 +76,58 @@ export class Chalkit {
       ...target[finalKey][id],
       ...this.smartCloneDeep(data),
     };
+    return this;
   }
 
-  itemMergeDeep(path: string, id: string, data: Record<string, any>): void {
+  itemMergeDeep(path: string, id: string, data: Record<string, any>): this {
     const { target, finalKey } = this.getTarget(path);
     this.ensurePlainObject(target, finalKey);
     this.ensurePlainObject(target[finalKey], id);
     const existingData = target[finalKey][id];
     target[finalKey][id] = merge({}, existingData, this.smartCloneDeep(data));
+    return this;
   }
 
-  itemDelete(path: string, id: string): void {
+  itemDelete(path: string, id: string): this {
     const { target, finalKey } = this.getTarget(path);
     if (isPlainObject(target[finalKey])) {
       delete target[finalKey][id];
     }
+    return this;
   }
 
   // Array operations
-  arrayAppend(path: string, items: any[]): void {
+  arrayAppend(path: string, items: any[]): this {
     const { target, finalKey } = this.getTarget(path);
     this.ensureArray(target, finalKey);
     target[finalKey] = [...target[finalKey], ...this.smartCloneDeep(items)];
+    return this;
   }
 
-  arrayToggle(path: string, item: any): void {
+  arrayToggle(path: string, item: any): this {
     const { target, finalKey } = this.getTarget(path);
     this.ensureArray(target, finalKey);
     const list = target[finalKey];
     target[finalKey] = list.includes(item)
       ? list.filter((i: any) => i !== item)
       : [...list, this.smartCloneDeep(item)];
+    return this;
   }
 
-  arrayRemove(path: string, item: any): void {
+  arrayRemove(path: string, item: any): this {
     const { target, finalKey } = this.getTarget(path);
     this.ensureArray(target, finalKey);
     target[finalKey] = target[finalKey].filter((i: any) => i !== item);
+    return this;
   }
 
-  arrayRemoveBy(path: string, property: string, value: any): void {
+  arrayRemoveBy(path: string, property: string, value: any): this {
     const { target, finalKey } = this.getTarget(path);
     this.ensureArray(target, finalKey);
     target[finalKey] = target[finalKey].filter(
       (item: any) => item[property] !== value
     );
+    return this;
   }
 
   // Batch operations
