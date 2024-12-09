@@ -16,8 +16,8 @@ export type Operation =
   | "arrayRemove";
 
 interface ChalkeOptions {
-  commandChar?: string; // Character separating path and operation (default: "$")
-  pathDivider?: string; // Character separating path keys (default: "_")
+  marker?: string; // Character separating path and operation (default: "$")
+  divider?: string; // Character separating path keys (default: "_")
 }
 
 interface BatchCommand {
@@ -27,30 +27,30 @@ interface BatchCommand {
 
 export class Chalkit {
   private store: Store;
-  private commandChar: string;
-  private pathDivider: string;
+  private marker: string;
+  private divider: string;
 
   constructor(store: Store, options: ChalkeOptions = {}) {
     this.store = store;
-    this.commandChar = options.commandChar || "$";
-    this.pathDivider = options.pathDivider || "_";
+    this.marker = options.marker || "$";
+    this.divider = options.divider || ".";
   }
 
   apply(command: string, payload?: any): void {
-    if (!command.includes(this.commandChar)) {
+    if (!command.includes(this.marker)) {
       throw new Error(
-        `Invalid command format. Expected "path${this.commandChar}operation"`
+        `Invalid command format. Expected "path${this.marker}operation"`
       );
     }
 
-    const [path, op] = command.split(this.commandChar);
+    const [path, op] = command.split(this.marker);
 
     if (!this.isValidOperation(op)) {
       throw new Error(`Invalid operation: ${op}`);
     }
 
     const operation = op as Operation;
-    const keys = path.split(this.pathDivider);
+    const keys = path.split(this.divider);
 
     try {
       this.updateStore(keys, operation, payload);
@@ -64,8 +64,7 @@ export class Chalkit {
     // Determine the affected top-level keys
     const affectedKeys = new Set(
       commands.map(
-        ({ command }) =>
-          command.split(this.commandChar)[0].split(this.pathDivider)[0]
+        ({ command }) => command.split(this.marker)[0].split(this.divider)[0]
       )
     );
 

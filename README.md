@@ -27,7 +27,7 @@ import { Chalkit } from "chalkit";
 
 // Initialize store
 const store = {};
-const chalkit = new Chalkit(store);
+const chalkit = new Chalkit(store, { marker: "$", divider: "_" });
 ```
 
 ---
@@ -37,18 +37,21 @@ const chalkit = new Chalkit(store);
 ### Setting and Merging Values
 
 ```typescript
-// Set a value
-chalkit.apply("user$set", { name: "John", age: 30 });
+// Set a value in a deep path using the divider
+chalkit.apply("user_profile_name$set", { name: "John" });
 
-// Merge values
-chalkit.apply("user$merge", { email: "john@example.com" });
+// Merge values into a deep path
+chalkit.apply("user_profile_details$merge", {
+  age: 30,
+  email: "john@example.com",
+});
 ```
 
 ### Clearing Values
 
 ```typescript
-// Clear a value
-chalkit.apply("user$clear");
+// Clear a value in a deep path
+chalkit.apply("user_profile_name$clear");
 ```
 
 ---
@@ -58,19 +61,24 @@ chalkit.apply("user$clear");
 ### Append to Array
 
 ```typescript
-chalkit.apply("tags$arrayAppend", { data: ["typescript", "javascript"] });
+// Append to an array in a deep path
+chalkit.apply("user_profile_tags$arrayAppend", {
+  data: ["typescript", "javascript"],
+});
 ```
 
 ### Toggle Item in Array
 
 ```typescript
-chalkit.apply("favorites$arrayToggle", "item1");
+// Toggle an item in an array in a deep path
+chalkit.apply("user_profile_favorites$arrayToggle", "item1");
 ```
 
 ### Remove from Array
 
 ```typescript
-chalkit.apply("tags$arrayRemove", { item: "typescript" });
+// Remove an item from an array in a deep path
+chalkit.apply("user_profile_tags$arrayRemove", { item: "typescript" });
 ```
 
 ---
@@ -80,7 +88,8 @@ chalkit.apply("tags$arrayRemove", { item: "typescript" });
 ### Set Item in Collection
 
 ```typescript
-chalkit.apply("users$itemSet", {
+// Set an item in a collection at a deep path
+chalkit.apply("organization_members$itemSet", {
   id: "user1",
   data: { name: "John", age: 30 },
 });
@@ -89,7 +98,8 @@ chalkit.apply("users$itemSet", {
 ### Merge Item in Collection
 
 ```typescript
-chalkit.apply("users$itemMerge", {
+// Merge an item in a collection at a deep path
+chalkit.apply("organization_members$itemMerge", {
   id: "user1",
   data: { email: "john@example.com" },
 });
@@ -98,7 +108,8 @@ chalkit.apply("users$itemMerge", {
 ### Delete Item from Collection
 
 ```typescript
-chalkit.apply("users$itemDelete", "user1");
+// Delete an item from a collection at a deep path
+chalkit.apply("organization_members$itemDelete", "user1");
 ```
 
 ---
@@ -109,12 +120,12 @@ chalkit.apply("users$itemDelete", "user1");
 
 ```typescript
 chalkit.batch([
-  { command: "user$set", payload: { name: "John" } },
+  { command: "user_profile_name$set", payload: { name: "John" } },
+  { command: "settings_theme$set", payload: { theme: "dark" } },
   {
-    command: "settings$merge",
-    payload: { theme: "dark", notifications: true },
+    command: "user_profile_tags$arrayAppend",
+    payload: { data: ["typescript"] },
   },
-  { command: "tags$arrayAppend", payload: { data: ["typescript"] } },
 ]);
 ```
 
@@ -123,8 +134,8 @@ chalkit.batch([
 ```typescript
 try {
   chalkit.batch([
-    { command: "user$set", payload: { name: "John" } },
-    { command: "settings$invalid", payload: { theme: "dark" } }, // Invalid operation
+    { command: "user_profile_name$set", payload: { name: "John" } },
+    { command: "settings_invalid$set", payload: { theme: "dark" } }, // Invalid operation
   ]);
 } catch (error) {
   console.log("Batch failed, all changes rolled back");
@@ -135,4 +146,4 @@ try {
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details."
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

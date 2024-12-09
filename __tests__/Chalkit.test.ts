@@ -112,10 +112,10 @@ describe("Chalkit", () => {
     });
 
     // Need to merge at each level separately
-    chalkit.apply("user_profile_personal_contact$merge", {
+    chalkit.apply("user.profile.personal.contact$merge", {
       phone: "123-456-7890",
     });
-    chalkit.apply("user_profile_preferences$merge", {
+    chalkit.apply("user.profile.preferences$merge", {
       notifications: true,
     });
 
@@ -147,7 +147,7 @@ describe("Chalkit", () => {
         },
       },
       {
-        command: "user_profile_personal_contact$set",
+        command: "user.profile.personal.contact$set",
         payload: { email: "john@example.com" },
       },
       {
@@ -186,8 +186,8 @@ describe("Chalkit", () => {
   });
 
   test("should set deeply nested values using path divider", () => {
-    chalkit.apply("user_profile_personal$set", { name: "John" });
-    chalkit.apply("user_profile_personal_contact$set", {
+    chalkit.apply("user.profile.personal$set", { name: "John" });
+    chalkit.apply("user.profile.personal.contact$set", {
       email: "john@example.com",
       phone: "123-456-7890",
     });
@@ -207,17 +207,17 @@ describe("Chalkit", () => {
 
   test("should merge deeply nested values using path divider", () => {
     // Set initial nested data
-    chalkit.apply("user_profile_personal$set", {
+    chalkit.apply("user.profile.personal$set", {
       name: "John",
       contact: { email: "john@example.com" },
     });
-    chalkit.apply("user_profile_preferences$set", { theme: "light" });
+    chalkit.apply("user.profile.preferences$set", { theme: "light" });
 
     // Merge with new nested data
-    chalkit.apply("user_profile_personal_contact$merge", {
+    chalkit.apply("user.profile.personal.contact$merge", {
       phone: "123-456-7890",
     });
-    chalkit.apply("user_profile_preferences$merge", {
+    chalkit.apply("user.profile.preferences$merge", {
       notifications: true,
     });
 
@@ -241,15 +241,15 @@ describe("Chalkit", () => {
   test("should handle batch operations with path divider", () => {
     chalkit.batch([
       {
-        command: "user_profile_personal$set",
+        command: "user.profile.personal$set",
         payload: { name: "John" },
       },
       {
-        command: "user_profile_personal_contact$set",
+        command: "user.profile.personal.contact$set",
         payload: { email: "john@example.com" },
       },
       {
-        command: "settings_appearance_theme$set",
+        command: "settings.appearance.theme$set",
         payload: { mode: "dark", color: "blue" },
       },
     ]);
