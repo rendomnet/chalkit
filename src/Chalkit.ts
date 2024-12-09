@@ -3,7 +3,7 @@ import { cloneDeep, isPlainObject, merge } from "lodash";
 export type Store = Record<string, any>;
 
 interface ChalkitOptions {
-  divider?: string; // Character separating path keys (default: ".")
+  divider?: string;
 }
 
 export class Chalkit {
@@ -15,58 +15,98 @@ export class Chalkit {
     this.divider = options.divider || ".";
   }
 
-  // Direct operation methods
+  private getTarget(path: string): { target: any; finalKey: string } {
+    const keys = path.split(this.divider);
+    const finalKey = keys.pop();
+    if (!finalKey) throw new Error("Invalid path: Missing target key");
+
+    let target = this.store;
+    for (const key of keys) {
+      this.ensurePlainObject(target, key);
+      target = target[key];
+    }
+
+    return { target, finalKey };
+  }
+
   set(path: string, value: any): void {
-    this.executeOperation(path, "set", value);
+    const { target, finalKey } = this.getTarget(path);
+    target[finalKey] = this.smartCloneDeep(value);
   }
 
   clear(path: string): void {
-    this.executeOperation(path, "clear", undefined);
+    const { target, finalKey } = this.getTarget(path);
+    delete target[finalKey];
   }
 
   merge(path: string, value: Record<string, any>): void {
-    this.executeOperation(path, "merge", value);
+    const { target, finalKey } = this.getTarget(path);
+    this.ensurePlainObject(target, finalKey);
+    target[finalKey] = {
+      ...target[finalKey],
+      ...this.smartCloneDeep(value),
+    };
   }
 
   deepSet(path: string, value: any): void {
-    this.executeOperation(path, "deepSet", { data: value });
+    const { target, finalKey } = this.getTarget(path);
+    target[finalKey] = this.smartCloneDeep(value);
   }
 
   deepMerge(path: string, value: Record<string, any>): void {
-    this.executeOperation(path, "deepMerge", value);
+    const { target, finalKey } = this.getTarget(path);
+    this.ensurePlainObject(target, finalKey);
+    const existingData = target[finalKey];
+    target[finalKey] = merge({}, existingData, this.smartCloneDeep(value));
   }
 
   itemSet(path: string, id: string, data: any): void {
-    this.executeOperation(path, "itemSet", { id, data });
+    const { target, finalKey } = this.getTarget(path);
+    this.ensurePlainObject(target, finalKey);
+    this.ensurePlainObject(target[finalKey], id);
+    target[finalKey][id] = this.smartCloneDeep(data);
   }
 
   itemMerge(path: string, id: string, data: Record<string, any>): void {
-    this.executeOperation(path, "itemMerge", { id, data });
+    const { target, finalKey } = this.getTarget(path);
+    this.ensurePlainObject(target, finalKey);
+    this.ensurePlainObject(target[finalKey], id);
+    target[finalKey][id] = {
+      ...target[finalKey][id],
+      ...this.smartCloneDeep(data),
+    };
   }
 
   itemDelete(path: string, id: string): void {
-    this.executeOperation(path, "itemDelete", id);
+    const { target, finalKey } = this.getTarget(path);
+    if (isPlainObject(target[finalKey])) {
+      delete target[finalKey][id];
+    }
   }
 
   arrayAppend(path: string, items: any[]): void {
-    this.executeOperation(path, "arrayAppend", { data: items });
+    const { target, finalKey } = this.getTarget(path);
+    this.ensureArray(target, finalKey);
+    target[finalKey] = [...target[finalKey], ...this.smartCloneDeep(items)];
   }
 
   arrayToggle(path: string, item: any): void {
-    this.executeOperation(path, "arrayToggle", item);
+    const { target, finalKey } = this.getTarget(path);
+    this.ensureArray(target, finalKey);
+    const list = target[finalKey];
+    target[finalKey] = list.includes(item)
+      ? list.filter((i: any) => i !== item)
+      : [...list, this.smartCloneDeep(item)];
   }
 
   arrayRemove(path: string, item: any): void {
-    this.executeOperation(path, "arrayRemove", { item });
+    const { target, finalKey } = this.getTarget(path);
+    this.ensureArray(target, finalKey);
+    target[finalKey] = target[finalKey].filter((i: any) => i !== item);
   }
 
-  // Batch operations with new interface
-  batch(
-    operations: Array<{
-      method: keyof Chalkit;
-      args: any[];
-    }>
-  ): void {
+  // Batch operations
+  batch(operations: Array<{ method: keyof Chalkit; args: any[] }>): void {
     // Determine the affected top-level keys
     const affectedKeys = new Set(
       operations.map(({ args }) => args[0].split(this.divider)[0])
@@ -125,103 +165,5 @@ export class Chalkit {
       return cloneDeep(value);
     }
     return value;
-  }
-
-  private executeOperation(
-    path: string,
-    operation: string,
-    payload: any
-  ): void {
-    const keys = path.split(this.divider);
-    const finalKey = keys.pop();
-    if (!finalKey) throw new Error("Invalid path: Missing target key");
-
-    let target = this.store;
-    for (const key of keys) {
-      this.ensurePlainObject(target, key);
-      target = target[key];
-    }
-
-    switch (operation) {
-      case "set":
-        target[finalKey] = this.smartCloneDeep(payload);
-        break;
-
-      case "clear":
-        delete target[finalKey];
-        break;
-
-      case "merge":
-        this.ensurePlainObject(target, finalKey);
-        target[finalKey] = {
-          ...target[finalKey],
-          ...this.smartCloneDeep(payload),
-        };
-        break;
-
-      case "deepSet":
-        target[finalKey] = this.smartCloneDeep(payload.data);
-        break;
-
-      case "deepMerge": {
-        this.ensurePlainObject(target, finalKey);
-        const existingData = target[finalKey];
-        const newData = payload.data || payload;
-        target[finalKey] = merge(
-          {},
-          existingData,
-          this.smartCloneDeep(newData)
-        );
-        break;
-      }
-
-      case "itemSet":
-        this.ensurePlainObject(target[finalKey], payload.id);
-        target[finalKey][payload.id] = this.smartCloneDeep(payload.data);
-        break;
-
-      case "itemMerge":
-        this.ensurePlainObject(target[finalKey], payload.id);
-        target[finalKey][payload.id] = {
-          ...target[finalKey][payload.id],
-          ...this.smartCloneDeep(payload.data),
-        };
-        break;
-
-      case "itemDelete":
-        if (isPlainObject(target[finalKey])) {
-          delete target[finalKey][payload];
-        }
-        break;
-
-      case "arrayAppend":
-        this.ensureArray(target, finalKey);
-        target[finalKey] = [
-          ...target[finalKey],
-          ...this.smartCloneDeep(payload.data),
-        ];
-        break;
-
-      case "arrayToggle": {
-        this.ensureArray(target, finalKey);
-        const list = target[finalKey];
-        target[finalKey] = list.includes(payload)
-          ? list.filter((item: any) => item !== payload)
-          : [...list, this.smartCloneDeep(payload)];
-        break;
-      }
-
-      case "arrayRemove":
-        this.ensureArray(target, finalKey);
-        if (payload.item) {
-          target[finalKey] = target[finalKey].filter(
-            (item: any) => item !== payload.item
-          );
-        }
-        break;
-
-      default:
-        throw new Error(`Unsupported operation '${operation}'`);
-    }
   }
 }
