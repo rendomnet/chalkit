@@ -68,4 +68,223 @@ describe("Chalkit", () => {
       user: { name: "Initial" },
     });
   });
+
+  test("should set deeply nested values", () => {
+    chalkit.apply("user$set", {
+      profile: {
+        personal: {
+          name: "John",
+          contact: {
+            email: "john@example.com",
+            phone: "123-456-7890",
+          },
+        },
+      },
+    });
+
+    expect(store.user).toEqual({
+      profile: {
+        personal: {
+          name: "John",
+          contact: {
+            email: "john@example.com",
+            phone: "123-456-7890",
+          },
+        },
+      },
+    });
+  });
+
+  test("should merge deeply nested values", () => {
+    // Set initial nested data
+    chalkit.apply("user$set", {
+      profile: {
+        personal: {
+          name: "John",
+          contact: {
+            email: "john@example.com",
+          },
+        },
+        preferences: {
+          theme: "light",
+        },
+      },
+    });
+
+    // Merge with new nested data
+    chalkit.apply("user$merge", {
+      profile: {
+        personal: {
+          contact: {
+            phone: "123-456-7890",
+          },
+        },
+        preferences: {
+          notifications: true,
+        },
+      },
+    });
+
+    expect(store.user).toEqual({
+      profile: {
+        personal: {
+          name: "John",
+          contact: {
+            email: "john@example.com",
+            phone: "123-456-7890",
+          },
+        },
+        preferences: {
+          theme: "light",
+          notifications: true,
+        },
+      },
+    });
+  });
+
+  test("should handle batch operations with deeply nested values", () => {
+    chalkit.batch([
+      {
+        command: "user$set",
+        payload: {
+          profile: {
+            personal: { name: "John" },
+          },
+        },
+      },
+      {
+        command: "user$merge",
+        payload: {
+          profile: {
+            personal: {
+              contact: { email: "john@example.com" },
+            },
+          },
+        },
+      },
+      {
+        command: "settings$set",
+        payload: {
+          appearance: {
+            theme: {
+              mode: "dark",
+              color: "blue",
+            },
+          },
+        },
+      },
+    ]);
+
+    expect(store).toEqual({
+      user: {
+        profile: {
+          personal: {
+            name: "John",
+            contact: {
+              email: "john@example.com",
+            },
+          },
+        },
+      },
+      settings: {
+        appearance: {
+          theme: {
+            mode: "dark",
+            color: "blue",
+          },
+        },
+      },
+    });
+  });
+
+  test("should set deeply nested values using path divider", () => {
+    chalkit.apply("user_profile_personal$set", { name: "John" });
+    chalkit.apply("user_profile_personal_contact$set", {
+      email: "john@example.com",
+      phone: "123-456-7890",
+    });
+
+    expect(store.user).toEqual({
+      profile: {
+        personal: {
+          name: "John",
+          contact: {
+            email: "john@example.com",
+            phone: "123-456-7890",
+          },
+        },
+      },
+    });
+  });
+
+  test("should merge deeply nested values using path divider", () => {
+    // Set initial nested data
+    chalkit.apply("user_profile_personal$set", {
+      name: "John",
+      contact: { email: "john@example.com" },
+    });
+    chalkit.apply("user_profile_preferences$set", { theme: "light" });
+
+    // Merge with new nested data
+    chalkit.apply("user_profile_personal_contact$merge", {
+      phone: "123-456-7890",
+    });
+    chalkit.apply("user_profile_preferences$merge", {
+      notifications: true,
+    });
+
+    expect(store.user).toEqual({
+      profile: {
+        personal: {
+          name: "John",
+          contact: {
+            email: "john@example.com",
+            phone: "123-456-7890",
+          },
+        },
+        preferences: {
+          theme: "light",
+          notifications: true,
+        },
+      },
+    });
+  });
+
+  test("should handle batch operations with path divider", () => {
+    chalkit.batch([
+      {
+        command: "user_profile_personal$set",
+        payload: { name: "John" },
+      },
+      {
+        command: "user_profile_personal_contact$set",
+        payload: { email: "john@example.com" },
+      },
+      {
+        command: "settings_appearance_theme$set",
+        payload: { mode: "dark", color: "blue" },
+      },
+    ]);
+
+    expect(store).toEqual({
+      user: {
+        profile: {
+          personal: {
+            name: "John",
+            contact: {
+              email: "john@example.com",
+            },
+          },
+        },
+      },
+      settings: {
+        appearance: {
+          theme: {
+            mode: "dark",
+            color: "blue",
+          },
+        },
+      },
+    });
+  });
 });
