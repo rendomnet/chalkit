@@ -10,20 +10,20 @@ describe("Chalkit", () => {
   });
 
   test("should set a value", () => {
-    chalkit.apply("user$set", { name: "John" });
+    chalkit.set("user", { name: "John" });
     expect(store.user).toEqual({ name: "John" });
   });
 
   test("should merge values", () => {
-    chalkit.apply("user$set", { name: "John" });
-    chalkit.apply("user$merge", { age: 30 });
+    chalkit.set("user", { name: "John" });
+    chalkit.merge("user", { age: 30 });
     expect(store.user).toEqual({ name: "John", age: 30 });
   });
 
   test("should handle batch operations", () => {
     chalkit.batch([
-      { command: "user$set", payload: { name: "John" } },
-      { command: "settings$set", payload: { theme: "dark" } },
+      { method: "set", args: ["user", { name: "John" }] },
+      { method: "set", args: ["settings", { theme: "dark" }] },
     ]);
 
     expect(store).toEqual({
@@ -34,12 +34,12 @@ describe("Chalkit", () => {
 
   test("should handle batch operations with existing data", () => {
     // Set initial data
-    chalkit.apply("user$set", { email: "john@example.com" });
+    chalkit.set("user", { email: "john@example.com" });
 
     // Perform batch operations
     chalkit.batch([
-      { command: "user$merge", payload: { name: "John" } },
-      { command: "settings$set", payload: { theme: "dark" } },
+      { method: "merge", args: ["user", { name: "John" }] },
+      { method: "set", args: ["settings", { theme: "dark" }] },
     ]);
 
     expect(store).toEqual({
@@ -53,13 +53,13 @@ describe("Chalkit", () => {
 
   test("should rollback on batch operation failure", () => {
     // Set initial data
-    chalkit.apply("user$set", { name: "Initial" });
+    chalkit.set("user", { name: "Initial" });
 
     // Attempt batch with invalid operation
     expect(() => {
       chalkit.batch([
-        { command: "user$merge", payload: { name: "John" } },
-        { command: "settings$invalid", payload: { theme: "dark" } },
+        { method: "merge", args: ["user", { name: "John" }] },
+        { method: "invalid" as any, args: ["settings", { theme: "dark" }] },
       ]);
     }).toThrow();
 
@@ -70,7 +70,7 @@ describe("Chalkit", () => {
   });
 
   test("should set deeply nested values", () => {
-    chalkit.apply("user$set", {
+    chalkit.deepSet("user", {
       profile: {
         personal: {
           name: "John",
@@ -97,25 +97,21 @@ describe("Chalkit", () => {
 
   test("should merge deeply nested values", () => {
     // Set initial nested data
-    chalkit.apply("user$set", {
+    chalkit.deepSet("user", {
       profile: {
         personal: {
           name: "John",
-          contact: {
-            email: "john@example.com",
-          },
+          contact: { email: "john@example.com" },
         },
-        preferences: {
-          theme: "light",
-        },
+        preferences: { theme: "light" },
       },
     });
 
-    // Need to merge at each level separately
-    chalkit.apply("user.profile.personal.contact$merge", {
+    // Merge with new nested data
+    chalkit.deepMerge("user.profile.personal.contact", {
       phone: "123-456-7890",
     });
-    chalkit.apply("user.profile.preferences$merge", {
+    chalkit.deepMerge("user.profile.preferences", {
       notifications: true,
     });
 
@@ -139,27 +135,26 @@ describe("Chalkit", () => {
   test("should handle batch operations with deeply nested values", () => {
     chalkit.batch([
       {
-        command: "user$set",
-        payload: {
-          profile: {
-            personal: { name: "John" },
-          },
-        },
+        method: "deepSet",
+        args: ["user", { profile: { personal: { name: "John" } } }],
       },
       {
-        command: "user.profile.personal.contact$set",
-        payload: { email: "john@example.com" },
+        method: "set",
+        args: ["user.profile.personal.contact", { email: "john@example.com" }],
       },
       {
-        command: "settings$set",
-        payload: {
-          appearance: {
-            theme: {
-              mode: "dark",
-              color: "blue",
+        method: "deepSet",
+        args: [
+          "settings",
+          {
+            appearance: {
+              theme: {
+                mode: "dark",
+                color: "blue",
+              },
             },
           },
-        },
+        ],
       },
     ]);
 
@@ -185,94 +180,30 @@ describe("Chalkit", () => {
     });
   });
 
-  test("should set deeply nested values using path divider", () => {
-    chalkit.apply("user.profile.personal$set", { name: "John" });
-    chalkit.apply("user.profile.personal.contact$set", {
-      email: "john@example.com",
-      phone: "123-456-7890",
-    });
+  // Add tests for new array operations
+  test("should handle array operations", () => {
+    chalkit.arrayAppend("todos", ["Task 1", "Task 2"]);
+    expect(store.todos).toEqual(["Task 1", "Task 2"]);
 
-    expect(store.user).toEqual({
-      profile: {
-        personal: {
-          name: "John",
-          contact: {
-            email: "john@example.com",
-            phone: "123-456-7890",
-          },
-        },
-      },
-    });
+    chalkit.arrayToggle("todos", "Task 3");
+    expect(store.todos).toEqual(["Task 1", "Task 2", "Task 3"]);
+
+    chalkit.arrayToggle("todos", "Task 2");
+    expect(store.todos).toEqual(["Task 1", "Task 3"]);
+
+    chalkit.arrayRemove("todos", "Task 3");
+    expect(store.todos).toEqual(["Task 1"]);
   });
 
-  test("should merge deeply nested values using path divider", () => {
-    // Set initial nested data
-    chalkit.apply("user.profile.personal$set", {
-      name: "John",
-      contact: { email: "john@example.com" },
-    });
-    chalkit.apply("user.profile.preferences$set", { theme: "light" });
+  // Add tests for item operations
+  test("should handle item operations", () => {
+    chalkit.itemSet("users", "user1", { name: "John" });
+    expect(store.users).toEqual({ user1: { name: "John" } });
 
-    // Merge with new nested data
-    chalkit.apply("user.profile.personal.contact$merge", {
-      phone: "123-456-7890",
-    });
-    chalkit.apply("user.profile.preferences$merge", {
-      notifications: true,
-    });
+    chalkit.itemMerge("users", "user1", { age: 30 });
+    expect(store.users).toEqual({ user1: { name: "John", age: 30 } });
 
-    expect(store.user).toEqual({
-      profile: {
-        personal: {
-          name: "John",
-          contact: {
-            email: "john@example.com",
-            phone: "123-456-7890",
-          },
-        },
-        preferences: {
-          theme: "light",
-          notifications: true,
-        },
-      },
-    });
-  });
-
-  test("should handle batch operations with path divider", () => {
-    chalkit.batch([
-      {
-        command: "user.profile.personal$set",
-        payload: { name: "John" },
-      },
-      {
-        command: "user.profile.personal.contact$set",
-        payload: { email: "john@example.com" },
-      },
-      {
-        command: "settings.appearance.theme$set",
-        payload: { mode: "dark", color: "blue" },
-      },
-    ]);
-
-    expect(store).toEqual({
-      user: {
-        profile: {
-          personal: {
-            name: "John",
-            contact: {
-              email: "john@example.com",
-            },
-          },
-        },
-      },
-      settings: {
-        appearance: {
-          theme: {
-            mode: "dark",
-            color: "blue",
-          },
-        },
-      },
-    });
+    chalkit.itemDelete("users", "user1");
+    expect(store.users).toEqual({});
   });
 });
