@@ -70,7 +70,7 @@ describe("Chalkit", () => {
   });
 
   test("should set deeply nested values", () => {
-    chalkit.deepSet("user", {
+    chalkit.set("user", {
       profile: {
         personal: {
           name: "John",
@@ -97,7 +97,7 @@ describe("Chalkit", () => {
 
   test("should merge deeply nested values", () => {
     // Set initial nested data
-    chalkit.deepSet("user", {
+    chalkit.set("user", {
       profile: {
         personal: {
           name: "John",
@@ -108,10 +108,10 @@ describe("Chalkit", () => {
     });
 
     // Merge with new nested data
-    chalkit.deepMerge("user.profile.personal.contact", {
+    chalkit.mergeDeep("user.profile.personal.contact", {
       phone: "123-456-7890",
     });
-    chalkit.deepMerge("user.profile.preferences", {
+    chalkit.mergeDeep("user.profile.preferences", {
       notifications: true,
     });
 
@@ -135,7 +135,7 @@ describe("Chalkit", () => {
   test("should handle batch operations with deeply nested values", () => {
     chalkit.batch([
       {
-        method: "deepSet",
+        method: "set",
         args: ["user", { profile: { personal: { name: "John" } } }],
       },
       {
@@ -143,7 +143,7 @@ describe("Chalkit", () => {
         args: ["user.profile.personal.contact", { email: "john@example.com" }],
       },
       {
-        method: "deepSet",
+        method: "set",
         args: [
           "settings",
           {

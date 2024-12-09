@@ -34,7 +34,7 @@ export class Chalkit {
     target[finalKey] = this.smartCloneDeep(value);
   }
 
-  clear(path: string): void {
+  remove(path: string): void {
     const { target, finalKey } = this.getTarget(path);
     delete target[finalKey];
   }
@@ -48,18 +48,14 @@ export class Chalkit {
     };
   }
 
-  deepSet(path: string, value: any): void {
-    const { target, finalKey } = this.getTarget(path);
-    target[finalKey] = this.smartCloneDeep(value);
-  }
-
-  deepMerge(path: string, value: Record<string, any>): void {
+  mergeDeep(path: string, value: Record<string, any>): void {
     const { target, finalKey } = this.getTarget(path);
     this.ensurePlainObject(target, finalKey);
     const existingData = target[finalKey];
     target[finalKey] = merge({}, existingData, this.smartCloneDeep(value));
   }
 
+  // Object item operations
   itemSet(path: string, id: string, data: any): void {
     const { target, finalKey } = this.getTarget(path);
     this.ensurePlainObject(target, finalKey);
@@ -77,6 +73,14 @@ export class Chalkit {
     };
   }
 
+  itemMergeDeep(path: string, id: string, data: Record<string, any>): void {
+    const { target, finalKey } = this.getTarget(path);
+    this.ensurePlainObject(target, finalKey);
+    this.ensurePlainObject(target[finalKey], id);
+    const existingData = target[finalKey][id];
+    target[finalKey][id] = merge({}, existingData, this.smartCloneDeep(data));
+  }
+
   itemDelete(path: string, id: string): void {
     const { target, finalKey } = this.getTarget(path);
     if (isPlainObject(target[finalKey])) {
@@ -84,6 +88,7 @@ export class Chalkit {
     }
   }
 
+  // Array operations
   arrayAppend(path: string, items: any[]): void {
     const { target, finalKey } = this.getTarget(path);
     this.ensureArray(target, finalKey);
@@ -103,6 +108,14 @@ export class Chalkit {
     const { target, finalKey } = this.getTarget(path);
     this.ensureArray(target, finalKey);
     target[finalKey] = target[finalKey].filter((i: any) => i !== item);
+  }
+
+  arrayRemoveBy(path: string, property: string, value: any): void {
+    const { target, finalKey } = this.getTarget(path);
+    this.ensureArray(target, finalKey);
+    target[finalKey] = target[finalKey].filter(
+      (item: any) => item[property] !== value
+    );
   }
 
   // Batch operations

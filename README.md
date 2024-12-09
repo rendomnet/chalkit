@@ -51,7 +51,7 @@ chalkit.apply("user_profile_details$merge", {
 
 ```typescript
 // Clear a value in a deep path
-chalkit.apply("user_profile_name$clear");
+chalkit.apply("user_profile_name$remove");
 ```
 
 ---
