@@ -87,7 +87,8 @@ export class Chalkit {
 
     // Try applying commands on the cloned store
     try {
-      this.store = { ...this.store, ...tempStore }; // Temporarily use the cloned parts
+      const workingStore = { ...this.store }; // Create a working copy of the entire store
+      this.store = workingStore; // Use the working copy
       commands.forEach(({ command, payload }) => this.call(command, payload));
     } catch (error) {
       console.error("Failed to execute batch commands:", error);
