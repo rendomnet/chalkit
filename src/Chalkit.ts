@@ -61,7 +61,7 @@ export class Chalkit {
   }
 
   batch(commands: BatchCommand[]): void {
-    // Identify affected top-level keys
+    // Determine the affected top-level keys
     const affectedKeys = new Set(
       commands.map(
         ({ command }) =>
@@ -69,34 +69,34 @@ export class Chalkit {
       )
     );
 
-    // Clone only the affected parts of the store
-    const tempStore: Store = {};
-    for (const key of affectedKeys) {
-      if (key in this.store) {
-        tempStore[key] = cloneDeep(this.store[key]);
-      }
-    }
-
-    // Backup original values of affected keys
+    // Clone only the affected parts of the store for rollback
     const originalStore: Partial<Store> = {};
     for (const key of affectedKeys) {
       if (key in this.store) {
-        originalStore[key] = this.store[key];
+        originalStore[key] = cloneDeep(this.store[key]);
       }
     }
 
-    // Try applying commands on the cloned store
     try {
-      const workingStore = { ...this.store }; // Create a working copy of the entire store
-      this.store = workingStore; // Use the working copy
-      commands.forEach(({ command, payload }) => this.call(command, payload));
+      // Execute each command
+      commands.forEach(({ command, payload }) => {
+        this.call(command, payload);
+      });
     } catch (error) {
-      console.error("Failed to execute batch commands:", error);
-      // Restore original values in case of error
+      console.error("Batch execution failed. Rolling back changes...", error);
+
+      // Rollback only the affected parts
       for (const key of affectedKeys) {
-        this.store[key] = originalStore[key];
+        if (key in originalStore) {
+          this.store[key] = originalStore[key]; // Restore original value
+        } else {
+          delete this.store[key]; // Remove keys that were added during batch
+        }
       }
-      throw error;
+
+      throw new Error(
+        `Batch execution failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
