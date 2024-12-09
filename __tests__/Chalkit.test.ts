@@ -10,13 +10,13 @@ describe("Chalkit", () => {
   });
 
   test("should set a value", () => {
-    chalkit.call("user$set", { name: "John" });
+    chalkit.apply("user$set", { name: "John" });
     expect(store.user).toEqual({ name: "John" });
   });
 
   test("should merge values", () => {
-    chalkit.call("user$set", { name: "John" });
-    chalkit.call("user$merge", { age: 30 });
+    chalkit.apply("user$set", { name: "John" });
+    chalkit.apply("user$merge", { age: 30 });
     expect(store.user).toEqual({ name: "John", age: 30 });
   });
 
@@ -34,7 +34,7 @@ describe("Chalkit", () => {
 
   test("should handle batch operations with existing data", () => {
     // Set initial data
-    chalkit.call("user$set", { email: "john@example.com" });
+    chalkit.apply("user$set", { email: "john@example.com" });
 
     // Perform batch operations
     chalkit.batch([
@@ -53,7 +53,7 @@ describe("Chalkit", () => {
 
   test("should rollback on batch operation failure", () => {
     // Set initial data
-    chalkit.call("user$set", { name: "Initial" });
+    chalkit.apply("user$set", { name: "Initial" });
 
     // Attempt batch with invalid operation
     expect(() => {

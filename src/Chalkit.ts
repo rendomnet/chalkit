@@ -36,7 +36,7 @@ export class Chalkit {
     this.pathDivider = options.pathDivider || "_";
   }
 
-  call(command: string, payload?: any): void {
+  apply(command: string, payload?: any): void {
     if (!command.includes(this.commandChar)) {
       throw new Error(
         `Invalid command format. Expected "path${this.commandChar}operation"`
@@ -80,7 +80,7 @@ export class Chalkit {
     try {
       // Execute each command
       commands.forEach(({ command, payload }) => {
-        this.call(command, payload);
+        this.apply(command, payload);
       });
     } catch (error) {
       console.error("Batch execution failed. Rolling back changes...", error);
