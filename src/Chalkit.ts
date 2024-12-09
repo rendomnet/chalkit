@@ -2,70 +2,74 @@ import { cloneDeep, isPlainObject, merge } from "lodash";
 
 export type Store = Record<string, any>;
 
-export type Operation =
-  | "set"
-  | "clear"
-  | "merge"
-  | "deepSet"
-  | "deepMerge"
-  | "itemSet"
-  | "itemMerge"
-  | "itemDelete"
-  | "arrayAppend"
-  | "arrayToggle"
-  | "arrayRemove";
-
-interface ChalkeOptions {
-  marker?: string; // Character separating path and operation (default: "$")
-  divider?: string; // Character separating path keys (default: "_")
-}
-
-interface BatchCommand {
-  command: string;
-  payload: any;
+interface ChalkitOptions {
+  divider?: string; // Character separating path keys (default: ".")
 }
 
 export class Chalkit {
   private store: Store;
-  private marker: string;
   private divider: string;
 
-  constructor(store: Store, options: ChalkeOptions = {}) {
+  constructor(store: Store, options: ChalkitOptions = {}) {
     this.store = store;
-    this.marker = options.marker || "$";
     this.divider = options.divider || ".";
   }
 
-  apply(command: string, payload?: any): void {
-    if (!command.includes(this.marker)) {
-      throw new Error(
-        `Invalid command format. Expected "path${this.marker}operation"`
-      );
-    }
-
-    const [path, op] = command.split(this.marker);
-
-    if (!this.isValidOperation(op)) {
-      throw new Error(`Invalid operation: ${op}`);
-    }
-
-    const operation = op as Operation;
-    const keys = path.split(this.divider);
-
-    try {
-      this.updateStore(keys, operation, payload);
-    } catch (error) {
-      console.error(`Failed to execute command "${command}":`, error);
-      throw error;
-    }
+  // Direct operation methods
+  set(path: string, value: any): void {
+    this.executeOperation(path, "set", value);
   }
 
-  batch(commands: BatchCommand[]): void {
+  clear(path: string): void {
+    this.executeOperation(path, "clear", undefined);
+  }
+
+  merge(path: string, value: Record<string, any>): void {
+    this.executeOperation(path, "merge", value);
+  }
+
+  deepSet(path: string, value: any): void {
+    this.executeOperation(path, "deepSet", { data: value });
+  }
+
+  deepMerge(path: string, value: Record<string, any>): void {
+    this.executeOperation(path, "deepMerge", value);
+  }
+
+  itemSet(path: string, id: string, data: any): void {
+    this.executeOperation(path, "itemSet", { id, data });
+  }
+
+  itemMerge(path: string, id: string, data: Record<string, any>): void {
+    this.executeOperation(path, "itemMerge", { id, data });
+  }
+
+  itemDelete(path: string, id: string): void {
+    this.executeOperation(path, "itemDelete", id);
+  }
+
+  arrayAppend(path: string, items: any[]): void {
+    this.executeOperation(path, "arrayAppend", { data: items });
+  }
+
+  arrayToggle(path: string, item: any): void {
+    this.executeOperation(path, "arrayToggle", item);
+  }
+
+  arrayRemove(path: string, item: any): void {
+    this.executeOperation(path, "arrayRemove", { item });
+  }
+
+  // Batch operations with new interface
+  batch(
+    operations: Array<{
+      method: keyof Chalkit;
+      args: any[];
+    }>
+  ): void {
     // Determine the affected top-level keys
     const affectedKeys = new Set(
-      commands.map(
-        ({ command }) => command.split(this.marker)[0].split(this.divider)[0]
-      )
+      operations.map(({ args }) => args[0].split(this.divider)[0])
     );
 
     // Clone only the affected parts of the store for rollback
@@ -77,9 +81,14 @@ export class Chalkit {
     }
 
     try {
-      // Execute each command
-      commands.forEach(({ command, payload }) => {
-        this.apply(command, payload);
+      // Execute each operation
+      operations.forEach(({ method, args }) => {
+        if (typeof this[method] === "function") {
+          const fn = this[method] as (...args: any[]) => void;
+          fn.apply(this, args);
+        } else {
+          throw new Error(`Invalid method: ${String(method)}`);
+        }
       });
     } catch (error) {
       console.error("Batch execution failed. Rolling back changes...", error);
@@ -87,9 +96,9 @@ export class Chalkit {
       // Rollback only the affected parts
       for (const key of affectedKeys) {
         if (key in originalStore) {
-          this.store[key] = originalStore[key]; // Restore original value
+          this.store[key] = originalStore[key];
         } else {
-          delete this.store[key]; // Remove keys that were added during batch
+          delete this.store[key];
         }
       }
 
@@ -97,22 +106,6 @@ export class Chalkit {
         `Batch execution failed: ${error instanceof Error ? error.message : String(error)}`
       );
     }
-  }
-
-  private isValidOperation(op: string): op is Operation {
-    return [
-      "set",
-      "clear",
-      "merge",
-      "deepSet",
-      "deepMerge",
-      "itemSet",
-      "itemMerge",
-      "itemDelete",
-      "arrayAppend",
-      "arrayToggle",
-      "arrayRemove",
-    ].includes(op);
   }
 
   private ensurePlainObject(target: any, key: string): void {
@@ -134,16 +127,17 @@ export class Chalkit {
     return value;
   }
 
-  private updateStore(
-    path: string[],
-    operation: Operation,
+  private executeOperation(
+    path: string,
+    operation: string,
     payload: any
   ): void {
-    const finalKey = path.pop();
-    if (!finalKey) throw new Error("Invalid command: Missing target key");
+    const keys = path.split(this.divider);
+    const finalKey = keys.pop();
+    if (!finalKey) throw new Error("Invalid path: Missing target key");
 
     let target = this.store;
-    for (const key of path) {
+    for (const key of keys) {
       this.ensurePlainObject(target, key);
       target = target[key];
     }
