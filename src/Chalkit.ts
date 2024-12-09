@@ -1,4 +1,4 @@
-import { cloneDeep, isPlainObject } from "lodash";
+import { cloneDeep, isPlainObject, merge } from "lodash";
 
 export type Store = Record<string, any>;
 
@@ -170,13 +170,17 @@ export class Chalkit {
         target[finalKey] = this.smartCloneDeep(payload.data);
         break;
 
-      case "deepMerge":
+      case "deepMerge": {
         this.ensurePlainObject(target, finalKey);
-        target[finalKey] = {
-          ...target[finalKey],
-          ...this.smartCloneDeep(payload.data || payload),
-        };
+        const existingData = target[finalKey];
+        const newData = payload.data || payload;
+        target[finalKey] = merge(
+          {},
+          existingData,
+          this.smartCloneDeep(newData)
+        );
         break;
+      }
 
       case "itemSet":
         this.ensurePlainObject(target[finalKey], payload.id);

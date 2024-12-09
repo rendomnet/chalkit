@@ -111,18 +111,12 @@ describe("Chalkit", () => {
       },
     });
 
-    // Merge with new nested data
-    chalkit.apply("user$merge", {
-      profile: {
-        personal: {
-          contact: {
-            phone: "123-456-7890",
-          },
-        },
-        preferences: {
-          notifications: true,
-        },
-      },
+    // Need to merge at each level separately
+    chalkit.apply("user_profile_personal_contact$merge", {
+      phone: "123-456-7890",
+    });
+    chalkit.apply("user_profile_preferences$merge", {
+      notifications: true,
     });
 
     expect(store.user).toEqual({
@@ -153,14 +147,8 @@ describe("Chalkit", () => {
         },
       },
       {
-        command: "user$merge",
-        payload: {
-          profile: {
-            personal: {
-              contact: { email: "john@example.com" },
-            },
-          },
-        },
+        command: "user_profile_personal_contact$set",
+        payload: { email: "john@example.com" },
       },
       {
         command: "settings$set",
