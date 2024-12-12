@@ -222,4 +222,38 @@ describe("Chalkit", () => {
       users: { user1: { name: "Alice" } },
     });
   });
+
+  test("should handle scribe operations", () => {
+    chalkit.scribe("user$set", { name: "John" });
+    expect(store.user).toEqual({ name: "John" });
+
+    chalkit.scribe("user$merge", { age: 30 });
+    expect(store.user).toEqual({ name: "John", age: 30 });
+
+    chalkit.scribe("todos$arrayAppend", ["Task 1", "Task 2"]);
+    expect(store.todos).toEqual(["Task 1", "Task 2"]);
+
+    chalkit.scribe("users$itemSet", { id: "user1", data: { name: "Alice" } });
+    expect(store.users).toEqual({ user1: { name: "Alice" } });
+  });
+
+  test("should support scribe method chaining", () => {
+    chalkit
+      .scribe("user$set", { name: "John" })
+      .scribe("user$merge", { age: 30 })
+      .scribe("todos$arrayAppend", ["Task 1"])
+      .scribe("users$itemSet", { id: "user1", data: { name: "Alice" } });
+
+    expect(store).toEqual({
+      user: { name: "John", age: 30 },
+      todos: ["Task 1"],
+      users: { user1: { name: "Alice" } },
+    });
+  });
+
+  test("should throw error for invalid scribe suffix", () => {
+    expect(() => {
+      chalkit.scribe("user$invalid", { name: "John" });
+    }).toThrow("Invalid suffix: invalid");
+  });
 });
