@@ -256,4 +256,40 @@ describe("Chalkit", () => {
       chalkit.scribe("user$invalid", { name: "John" });
     }).toThrow("Invalid suffix: invalid");
   });
+
+  test("should handle scribeBatch operations", () => {
+    chalkit.scribeBatch([
+      { path: "user$set", value: { name: "John" } },
+      { path: "user$merge", value: { age: 30 } },
+      { path: "todos$arrayAppend", value: ["Task 1", "Task 2"] },
+      {
+        path: "users$itemSet",
+        value: { id: "user1", data: { name: "Alice" } },
+      },
+    ]);
+
+    expect(store).toEqual({
+      user: { name: "John", age: 30 },
+      todos: ["Task 1", "Task 2"],
+      users: { user1: { name: "Alice" } },
+    });
+  });
+
+  test("should rollback scribeBatch on failure", () => {
+    // Set initial data
+    chalkit.scribe("user$set", { name: "Initial" });
+
+    // Attempt batch with invalid operation
+    expect(() => {
+      chalkit.scribeBatch([
+        { path: "user$merge", value: { age: 30 } },
+        { path: "user$invalid", value: { something: "wrong" } },
+      ]);
+    }).toThrow("Invalid suffix: invalid");
+
+    // Check if store was rolled back to initial state
+    expect(store).toEqual({
+      user: { name: "Initial" },
+    });
+  });
 });

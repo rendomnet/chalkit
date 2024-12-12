@@ -227,6 +227,47 @@ export class Chalkit {
     return this;
   }
 
+  scribeBatch(operations: Array<{ path: string; value: any }>): this {
+    try {
+      // Get affected top-level keys
+      const affectedKeys = new Set(
+        operations.map(
+          ({ path }) => path.split(this.divider)[0].split(this.marker)[0]
+        )
+      );
+
+      // Clone only the affected parts of the store for rollback
+      const originalStore: Partial<Store> = {};
+      for (const key of affectedKeys) {
+        if (key in this.store) {
+          originalStore[key] = cloneDeep(this.store[key]);
+        }
+      }
+
+      try {
+        // Execute each operation
+        operations.forEach(({ path, value }) => {
+          this.scribe(path, value);
+        });
+      } catch (error) {
+        // Rollback only the affected parts
+        for (const key of affectedKeys) {
+          if (key in originalStore) {
+            this.store[key] = originalStore[key];
+          } else {
+            delete this.store[key];
+          }
+        }
+        throw error;
+      }
+    } catch (error) {
+      throw new Error(
+        `Batch execution failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+    return this;
+  }
+
   private ensurePlainObject(target: any, key: string): void {
     if (!isPlainObject(target[key])) {
       target[key] = {};
