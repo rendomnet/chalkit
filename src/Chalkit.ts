@@ -4,15 +4,17 @@ export type Store = Record<string, any>;
 
 interface ChalkitOptions {
   divider?: string;
+  marker?: string;
 }
 
 export class Chalkit {
   private store: Store;
   private divider: string;
-
+  private marker: string;
   constructor(store: Store, options: ChalkitOptions = {}) {
     this.store = store;
     this.divider = options.divider || ".";
+    this.marker = options.marker || "$";
   }
 
   private getTarget(path: string): { target: any; finalKey: string } {
@@ -171,6 +173,58 @@ export class Chalkit {
         `Batch execution failed: ${error instanceof Error ? error.message : String(error)}`
       );
     }
+  }
+
+  setStore(store: Store): this {
+    this.store = store;
+    return this;
+  }
+
+  // type path with command suffix
+  // Value is the data to be set
+  scribe(pathWithSuffix: string, value: any): this {
+    const [path, suffix] = pathWithSuffix.split(this.marker);
+    switch (suffix) {
+      case "set":
+        this.set(path, value);
+        break;
+      case "remove":
+        this.remove(path);
+        break;
+      case "merge":
+        this.merge(path, value);
+        break;
+      case "mergeDeep":
+        this.mergeDeep(path, value);
+        break;
+      case "itemSet":
+        this.itemSet(path, value.id, value.data);
+        break;
+      case "itemMerge":
+        this.itemMerge(path, value.id, value.data);
+        break;
+      case "itemMergeDeep":
+        this.itemMergeDeep(path, value.id, value.data);
+        break;
+      case "itemDelete":
+        this.itemDelete(path, value);
+        break;
+      case "arrayAppend":
+        this.arrayAppend(path, value);
+        break;
+      case "arrayToggle":
+        this.arrayToggle(path, value);
+        break;
+      case "arrayRemove":
+        this.arrayRemove(path, value);
+        break;
+      case "arrayRemoveBy":
+        this.arrayRemoveBy(path, value.property, value.value);
+        break;
+      default:
+        throw new Error(`Invalid suffix: ${suffix}`);
+    }
+    return this;
   }
 
   private ensurePlainObject(target: any, key: string): void {
