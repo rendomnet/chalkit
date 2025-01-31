@@ -2,17 +2,20 @@ import { cloneDeep, isPlainObject, merge } from "lodash";
 
 export type Store = Record<string, any>;
 
+// Add type for Solid.js style store setter
+type StoreSetter<T> = (v: T | ((prev: T) => T)) => T;
+
 interface ChalkitOptions {
   divider?: string;
   marker?: string;
-  mutator?: (updater: (store: Store) => void) => void;
+  mutator?: StoreSetter<Store>;
 }
 
 export class Chalkit {
   private store: Store;
   private divider: string;
   private marker: string;
-  private mutator?: (updater: (store: Store) => void) => void;
+  private mutator?: StoreSetter<Store>;
 
   constructor(store: Store, options: ChalkitOptions = {}) {
     this.store = store;
@@ -37,7 +40,10 @@ export class Chalkit {
 
   private applyChange(callback: (store: Store) => void): void {
     if (this.mutator) {
-      this.mutator(callback);
+      this.mutator((store) => {
+        callback(store);
+        return store;
+      });
     } else {
       callback(this.store);
     }
