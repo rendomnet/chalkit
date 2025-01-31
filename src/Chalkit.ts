@@ -2,8 +2,8 @@ import { cloneDeep, isPlainObject, merge } from "lodash";
 
 export type Store = Record<string, any>;
 
-// Add type for Solid.js style store setter
-type StoreSetter<T> = (v: T | ((prev: T) => T)) => T;
+// Update to match Solid.js SetStoreFunction type more accurately
+type StoreSetter<T> = (value: T | ((prev: T) => T), ...args: any[]) => T;
 
 interface ChalkitOptions {
   divider?: string;
