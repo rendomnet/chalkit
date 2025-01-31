@@ -5,16 +5,20 @@ export type Store = Record<string, any>;
 interface ChalkitOptions {
   divider?: string;
   marker?: string;
+  mutator?: (updater: (store: Store) => void) => void;
 }
 
 export class Chalkit {
   private store: Store;
   private divider: string;
   private marker: string;
+  private mutator?: (updater: (store: Store) => void) => void;
+
   constructor(store: Store, options: ChalkitOptions = {}) {
     this.store = store;
     this.divider = options.divider || ".";
     this.marker = options.marker || "$";
+    this.mutator = options.mutator;
   }
 
   private getTarget(path: string): { target: any; finalKey: string } {
@@ -31,104 +35,136 @@ export class Chalkit {
     return { target, finalKey };
   }
 
+  private applyChange(callback: (store: Store) => void): void {
+    if (this.mutator) {
+      this.mutator(callback);
+    } else {
+      callback(this.store);
+    }
+  }
+
   set(path: string, value: any): this {
     const { target, finalKey } = this.getTarget(path);
-    target[finalKey] = this.smartCloneDeep(value);
+    this.applyChange(() => {
+      target[finalKey] = this.smartCloneDeep(value);
+    });
     return this;
   }
 
   remove(path: string): this {
     const { target, finalKey } = this.getTarget(path);
-    delete target[finalKey];
+    this.applyChange(() => {
+      delete target[finalKey];
+    });
     return this;
   }
 
   merge(path: string, value: Record<string, any>): this {
     const { target, finalKey } = this.getTarget(path);
-    this.ensurePlainObject(target, finalKey);
-    target[finalKey] = {
-      ...target[finalKey],
-      ...this.smartCloneDeep(value),
-    };
+    this.applyChange(() => {
+      this.ensurePlainObject(target, finalKey);
+      target[finalKey] = {
+        ...target[finalKey],
+        ...this.smartCloneDeep(value),
+      };
+    });
     return this;
   }
 
   mergeDeep(path: string, value: Record<string, any>): this {
     const { target, finalKey } = this.getTarget(path);
-    this.ensurePlainObject(target, finalKey);
-    const existingData = target[finalKey];
-    target[finalKey] = merge({}, existingData, this.smartCloneDeep(value));
+    this.applyChange(() => {
+      this.ensurePlainObject(target, finalKey);
+      const existingData = target[finalKey];
+      target[finalKey] = merge({}, existingData, this.smartCloneDeep(value));
+    });
     return this;
   }
 
   // Object item operations
   itemSet(path: string, id: string, data: any): this {
     const { target, finalKey } = this.getTarget(path);
-    this.ensurePlainObject(target, finalKey);
-    this.ensurePlainObject(target[finalKey], id);
-    target[finalKey][id] = this.smartCloneDeep(data);
+    this.applyChange(() => {
+      this.ensurePlainObject(target, finalKey);
+      this.ensurePlainObject(target[finalKey], id);
+      target[finalKey][id] = this.smartCloneDeep(data);
+    });
     return this;
   }
 
   itemMerge(path: string, id: string, data: Record<string, any>): this {
     const { target, finalKey } = this.getTarget(path);
-    this.ensurePlainObject(target, finalKey);
-    this.ensurePlainObject(target[finalKey], id);
-    target[finalKey][id] = {
-      ...target[finalKey][id],
-      ...this.smartCloneDeep(data),
-    };
+    this.applyChange(() => {
+      this.ensurePlainObject(target, finalKey);
+      this.ensurePlainObject(target[finalKey], id);
+      target[finalKey][id] = {
+        ...target[finalKey][id],
+        ...this.smartCloneDeep(data),
+      };
+    });
     return this;
   }
 
   itemMergeDeep(path: string, id: string, data: Record<string, any>): this {
     const { target, finalKey } = this.getTarget(path);
-    this.ensurePlainObject(target, finalKey);
-    this.ensurePlainObject(target[finalKey], id);
-    const existingData = target[finalKey][id];
-    target[finalKey][id] = merge({}, existingData, this.smartCloneDeep(data));
+    this.applyChange(() => {
+      this.ensurePlainObject(target, finalKey);
+      this.ensurePlainObject(target[finalKey], id);
+      const existingData = target[finalKey][id];
+      target[finalKey][id] = merge({}, existingData, this.smartCloneDeep(data));
+    });
     return this;
   }
 
   itemDelete(path: string, id: string): this {
     const { target, finalKey } = this.getTarget(path);
-    if (isPlainObject(target[finalKey])) {
-      delete target[finalKey][id];
-    }
+    this.applyChange(() => {
+      if (isPlainObject(target[finalKey])) {
+        delete target[finalKey][id];
+      }
+    });
     return this;
   }
 
   // Array operations
   arrayAppend(path: string, items: any[]): this {
     const { target, finalKey } = this.getTarget(path);
-    this.ensureArray(target, finalKey);
-    target[finalKey] = [...target[finalKey], ...this.smartCloneDeep(items)];
+    this.applyChange(() => {
+      this.ensureArray(target, finalKey);
+      target[finalKey] = [...target[finalKey], ...this.smartCloneDeep(items)];
+    });
     return this;
   }
 
   arrayToggle(path: string, item: any): this {
     const { target, finalKey } = this.getTarget(path);
-    this.ensureArray(target, finalKey);
-    const list = target[finalKey];
-    target[finalKey] = list.includes(item)
-      ? list.filter((i: any) => i !== item)
-      : [...list, this.smartCloneDeep(item)];
+    this.applyChange(() => {
+      this.ensureArray(target, finalKey);
+      const list = target[finalKey];
+      target[finalKey] = list.includes(item)
+        ? list.filter((i: any) => i !== item)
+        : [...list, this.smartCloneDeep(item)];
+    });
     return this;
   }
 
   arrayRemove(path: string, item: any): this {
     const { target, finalKey } = this.getTarget(path);
-    this.ensureArray(target, finalKey);
-    target[finalKey] = target[finalKey].filter((i: any) => i !== item);
+    this.applyChange(() => {
+      this.ensureArray(target, finalKey);
+      target[finalKey] = target[finalKey].filter((i: any) => i !== item);
+    });
     return this;
   }
 
   arrayRemoveBy(path: string, property: string, value: any): this {
     const { target, finalKey } = this.getTarget(path);
-    this.ensureArray(target, finalKey);
-    target[finalKey] = target[finalKey].filter(
-      (item: any) => item[property] !== value
-    );
+    this.applyChange(() => {
+      this.ensureArray(target, finalKey);
+      target[finalKey] = target[finalKey].filter(
+        (item: any) => item[property] !== value
+      );
+    });
     return this;
   }
 
@@ -176,7 +212,9 @@ export class Chalkit {
   }
 
   setStore(store: Store): this {
-    this.store = store;
+    this.applyChange(() => {
+      this.store = store;
+    });
     return this;
   }
 
